@@ -1,4 +1,5 @@
 import sys, random, string
+
 from PyQt6.QtCore import Qt, QSize, QAbstractTableModel, QModelIndex
 from PyQt6.QtWidgets import (
     QWidget, QApplication, QLabel,
@@ -6,13 +7,13 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QButtonGroup, QRadioButton,
     QSpinBox, QTextEdit, QComboBox,
     QStackedLayout, QMainWindow, QTableView,
-    QInputDialog,
+    QInputDialog, QStyledItemDelegate,
 )
 
 FONT_SIZE_LABEL = 14
 DATA_APP = {
     "title": "Артилерія 1 БрОП",
-    "sizes": (1000, 600),
+    "sizes": (1900, 600),
     "head_labels": (
         # 0 - text,
         ("Дата",),
@@ -34,15 +35,82 @@ DATA_APP = {
 }
 
 
+class SpinBoxDelegate2(QStyledItemDelegate):
+    """
+    Встановити SpinBox для поля в таблиці колонка 13
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.editor = None
+
+    def createEditor(self, parent, option, index):
+        editor = QSpinBox(parent)
+        editor.setMinimum(0)
+        editor.setMaximum(100)
+        return editor
+
+    def setEditorData(self, editor: QSpinBox, index):
+
+        value = index.model().data(index, Qt.ItemDataRole.DisplayRole)
+        if value:
+            try:
+                editor.setValue(int(value))
+            except ValueError:
+                print("Except")
+                editor.setValue(0)
+        else:
+            editor.setValue(0)
+
+    def setModelData(self, editor: QSpinBox, model, index):
+        editor.interpretText()
+        value = editor.value()
+        model.setData(index, value, Qt.ItemDataRole.EditRole)
+
+
+class SpinBoxDelegate(QStyledItemDelegate):
+    """
+    Встановити SpinBox для поля в таблиці колонка 10
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.editor = None
+
+    def createEditor(self, parent, option, index):
+        editor = QSpinBox(parent)
+        editor.setMinimum(0)
+        editor.setMaximum(100)
+        return editor
+
+    def setEditorData(self, editor: QSpinBox, index):
+
+        value = index.model().data(index, Qt.ItemDataRole.DisplayRole)
+        if value:
+            try:
+                editor.setValue(int(value))
+            except ValueError:
+                print("Except")
+                editor.setValue(0)
+        else:
+            editor.setValue(0)
+
+    def setModelData(self, editor: QSpinBox, model, index):
+        editor.interpretText()
+        value = editor.value()
+        model.setData(index, value, Qt.ItemDataRole.EditRole)
+
+
 class MyTableModel(QAbstractTableModel):
-    def __init__(self, data):
+    def __init__(self, data, tb: QTableView):
         super().__init__()
         self._data = data
+        self.tb = tb
 
-    def rowCount(self, index):
+    def rowCount(self, parent=QModelIndex()):
         return len(self._data)
 
-    def columnCount(self, index):
+    def columnCount(self, parent=QModelIndex()):
         if len(self._data):
             return len(self._data[0])
         else:
@@ -61,10 +129,12 @@ class MyTableModel(QAbstractTableModel):
                 return f"Р{section + 1}"
         return None
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role, ):
+
         if role == Qt.ItemDataRole.EditRole:
             self._data[index.row()][index.column()] = value
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
+
             return True
         return False
 
@@ -77,31 +147,38 @@ class MyTableModel(QAbstractTableModel):
         self._data.append(row_data)
         self.endInsertRows()
 
+    @staticmethod
+    def update_tb(tb: QTableView, ):
+        tb.update()
+        tb.viewport().update()
+
 
 class HeaderWidgetShoots(QWidget):
-    def __init__(self, parent_widget: QWidget = None, parent_layout: QVBoxLayout | QHBoxLayout = None, ):
-        super().__init__(parent_widget, )
+    def __init__(self, parent: QWidget = None, parent_layout: QVBoxLayout | QHBoxLayout = None, ):
+        super().__init__(parent, )
         self.layout = QHBoxLayout(self)
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 5, 0, 5)
         self.parent_layout = parent_layout
-        self.init_widgets()
 
     def init_widgets(self):
         self.set_widget(
             self,
             self.layout,
-            parent_layout=self.parent_layout,
             width=int(round(self.size().width() * 70 / 100)),
             height=50,
-            background_color="white",
+            background_color="yellow",
             border_color="black",
             border_width=1,
         )
+        lbl = QLabel()
+        lbl.setText("Header")
+        self.layout.addWidget(lbl)
 
-    @staticmethod
     def set_widget(
+            self,
             widget: QWidget,
             layout: QVBoxLayout | QHBoxLayout,
-            parent_layout: QVBoxLayout | QHBoxLayout,
             width: int, height: int,
             background_color: str = "white",
             border_color: str = "black",
@@ -113,7 +190,7 @@ class HeaderWidgetShoots(QWidget):
         widget.setStyleSheet(
             f"background-color: {background_color}; border: {border_width}px solid {border_color};"
         )
-        parent_layout.addWidget(widget)
+        self.parent_layout.addWidget(widget)
 
 
 class WidgetRight(QWidget):
@@ -126,10 +203,30 @@ class WidgetRight(QWidget):
         self.right_layout = QVBoxLayout(self)
         self.main_layout = main_layout
         self.right_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.init_widgets()
 
     def init_widgets(self):
-        pass
+        self.set_side_widget(
+            self,
+            self.right_layout,
+            background_color="yellow",
+            border_color="black",
+            border_width=1,
+        )
+        lbl = QLabel()
+        lbl.setText("Right")
+        self.right_layout.addWidget(lbl)
+
+    def set_side_widget(
+            self, widget: QWidget, layout: QVBoxLayout | QHBoxLayout,
+            background_color: str = "white",
+            border_color: str = "black",
+            border_width: int = 1,
+    ):
+        widget.setLayout(layout)
+        widget.setStyleSheet(
+            f"background-color: {background_color}; border: {border_width}px solid {border_color};"
+        )
+        self.main_layout.addWidget(widget)
 
 
 class WidgetLeft(QWidget):
@@ -141,8 +238,11 @@ class WidgetLeft(QWidget):
     def __init__(self, parent=None, main_layout: QVBoxLayout | QHBoxLayout = None, ):
         super().__init__(parent)
         self.left_layout = QVBoxLayout(self)
+        self.left_layout.setContentsMargins(0, 5, 0, 5)
+        self.left_layout.setSpacing(0)
         self.main_layout = main_layout
         self.left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        # Header
         self.header_widget_shoots = HeaderWidgetShoots(self, self.left_layout)
         self.add_cells_button = QPushButton()
         self.test_data = [
@@ -150,21 +250,25 @@ class WidgetLeft(QWidget):
             for _ in range(15)
         ]
         # Table
-        self.tb_model = MyTableModel(
-            self.test_data + [['' for _ in range(15)]] + [['' for _ in range(15)]]
-        )
         self.tb_view = QTableView()
+        self.tb_model = MyTableModel(
+            [['' for _ in range(15)]], self.tb_view
+        )
+        # GetDataTb
+        self.get_data_button = QPushButton()
+
+        self.data_tables = []
 
     def init_widgets(self):
+
         self.set_side_widget(
             self,
             self.left_layout,
-            width=int(round(self.size().width() * 30 / 100)),
-            height=self.size().height() - 50,
             background_color="white",
             border_color="black",
             border_width=1,
         )
+        self.header_widget_shoots.init_widgets()
         self.set_table_view()
         self.set_button(
             self.add_cells_button,
@@ -172,18 +276,20 @@ class WidgetLeft(QWidget):
             self.left_layout,
             self.add_cells,
         )
-
-        self.header_widget_shoots.init_widgets()
+        self.set_button(
+            self.get_data_button,
+            "get",
+            self.left_layout,
+            self.get_data,
+        )
 
     def set_side_widget(
-            self, widget: QWidget, layout: QVBoxLayout | QHBoxLayout, width: int, height: int,
+            self, widget: QWidget, layout: QVBoxLayout | QHBoxLayout,
             background_color: str = "white",
             border_color: str = "black",
             border_width: int = 1,
     ):
         widget.setLayout(layout)
-        widget.setMinimumWidth(width)
-        widget.setMinimumHeight(height)
         widget.setStyleSheet(
             f"background-color: {background_color}; border: {border_width}px solid {border_color};"
         )
@@ -193,11 +299,16 @@ class WidgetLeft(QWidget):
     @staticmethod
     def set_button(btn: QPushButton, text: str, layout: QVBoxLayout | QHBoxLayout, handler: callable, ):
         layout.addWidget(btn)
+        layout.setAlignment(btn, Qt.AlignmentFlag.AlignRight)
         btn.setText(text)
         btn.setStyleSheet(
-            "background-color: white; border: 0px solid black;"
+            "background-color: #e0e0e0; border: 1px solid black; font-weight: bold;"
         )
         btn.clicked.connect(handler)
+        btn.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        btn.setFixedWidth(150)
 
     def set_table_view(self):
         """
@@ -205,6 +316,10 @@ class WidgetLeft(QWidget):
         :return:
         """
         self.tb_view.setModel(self.tb_model)
+        delegate_count_shoot_spinbox = SpinBoxDelegate()
+        remainder_of_projectile = SpinBoxDelegate2()
+        self.tb_view.setItemDelegateForColumn(10, delegate_count_shoot_spinbox)
+        self.tb_view.setItemDelegateForColumn(13, remainder_of_projectile)
         self.left_layout.addWidget(self.tb_view)
 
     # Handlers
@@ -219,75 +334,52 @@ class WidgetLeft(QWidget):
             self.tb_model.addRow(new_row)
 
     def add_cells(self):
+        """
+        Додавання нового рядка
+        :return:
+        """
         self.tb_model.addRow(['' for _ in range(15)])
+
+    def get_data(self):
+        model = self.tb_model
+        for row in range(model.rowCount()):
+            temp_inner_data = []
+            for column in range(model.columnCount()):
+                index = model.index(row, column)
+                value = model.data(index, Qt.ItemDataRole.DisplayRole)
+                temp_inner_data.append(
+                    (row, column, value,)
+                )
+            self.data_tables.append(
+                temp_inner_data
+            )
 
 
 class WidgetWrapAll(QWidget):
     """
-    Віджет обгргортка
+    Віджет обгортка
     """
 
-    def __init__(self):
-        super().__init__()
-        self.set_widget_wrap(
-            self, background_color="white", border_color="black", border_width=1,
-        )
-        self.main_layout = QHBoxLayout(self)
-        self.widget_left = WidgetLeft(self, self.main_layout)
-
-        # RightWidget
-        self.widget_right = QWidget(self)
-        self.right_layout = QVBoxLayout()
-
-        # ButtonAddRow
-        self.add_cells_button = QPushButton()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.main_layout_wrap = QHBoxLayout(self)
+        self.widget_left = WidgetLeft(self, self.main_layout_wrap)
+        self.widget_right = WidgetRight(self, self.main_layout_wrap)
+        self.init_widgets()
 
     def init_widgets(self):
-        self.set_side_widget(
-            self.widget_right,
-            self.right_layout,
-            width=int(round(self.size().width() * 30 / 100)),
-            height=self.size().height() - 50
-        )
         self.widget_left.init_widgets()
-
-    # CreateHeaderWidget
-    @staticmethod
-    def set_widget(
-            widget: QWidget,
-            layout: QVBoxLayout | QHBoxLayout,
-            parent_layout: QVBoxLayout | QHBoxLayout,
-            width: int, height: int,
-            background_color: str = "white",
-            border_color: str = "black",
-            border_width: int = 1,
-    ):
-        widget.setLayout(layout)
-        widget.setMinimumWidth(width)
-        widget.setFixedHeight(height)
-        widget.setStyleSheet(
-            f"background-color: {background_color}; border: {border_width}px solid {border_color};"
+        self.widget_right.init_widgets()
+        self.set_widget_wrap(
+            self,
+            "white",
+            "black",
+            1,
         )
-        parent_layout.addWidget(widget)
-
-    # CreateSideWidgets
-    def set_side_widget(
-            self, widget: QWidget, layout: QVBoxLayout | QHBoxLayout, width: int, height: int,
-            background_color: str = "white",
-            border_color: str = "black",
-            border_width: int = 1,
-    ):
-        widget.setLayout(layout)
-        widget.setMinimumWidth(width)
-        widget.setMinimumHeight(height)
-        widget.setStyleSheet(
-            f"background-color: {background_color}; border: {border_width}px solid {border_color};"
-        )
-        self.main_layout.addWidget(widget)
 
     @staticmethod
     def set_widget_wrap(
-            widget: QWidget, background_color: str = "white",
+            widget, background_color: str = "white",
             border_color: str = "black", border_width: int = 1,
     ):
         widget.setStyleSheet(
@@ -298,10 +390,10 @@ class WidgetWrapAll(QWidget):
         # Отримуємо новий розмір
         new_size: QSize = event.size()
         self.widget_right.setMinimumWidth(
-            int(round(new_size.width() * 20 / 100), )
+            int(round(new_size.width() * 18 / 100), )
         )
         self.widget_left.setMinimumWidth(
-            int(round(new_size.width() * 79 / 100), )
+            int(round(new_size.width() * 78 / 100), )
         )
 
         # Викликаємо перевизначений метод з базового класу
@@ -314,19 +406,16 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(
             DATA_APP["title"]
         )
-        # MainWrapper
-        self.widget_wrap_all = WidgetWrapAll()
+        self.widget_wrap_all = None
 
-        #
         self.initUI()
 
     def initUI(self):
         self.setMinimumSize(
             QSize(*DATA_APP["sizes"], )
         )
-
+        self.widget_wrap_all = WidgetWrapAll(self)
         self.setCentralWidget(self.widget_wrap_all)
-        self.widget_wrap_all.init_widgets()
         self.show()
 
 
