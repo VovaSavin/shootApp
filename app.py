@@ -317,9 +317,9 @@ class WidgetLeft(QWidget):
         """
         self.tb_view.setModel(self.tb_model)
         delegate_count_shoot_spinbox = SpinBoxDelegate()
-        remainder_of_projectile = SpinBoxDelegate2()
+        # remainder_of_projectile = SpinBoxDelegate2()
         self.tb_view.setItemDelegateForColumn(10, delegate_count_shoot_spinbox)
-        self.tb_view.setItemDelegateForColumn(13, remainder_of_projectile)
+        # self.tb_view.setItemDelegateForColumn(13, remainder_of_projectile)
         self.left_layout.addWidget(self.tb_view)
 
     # Handlers
