@@ -5,7 +5,7 @@ from PyQt6.QtGui import QStandardItemModel
 from PyQt6.QtWidgets import (
     QWidget, QApplication, QLabel,
     QVBoxLayout, QHBoxLayout,
-    QSpinBox, QTableView, QStyledItemDelegate,
+    QSpinBox, QTableView, QStyledItemDelegate, QLineEdit,
 )
 
 lst = [
@@ -14,80 +14,100 @@ lst = [
     "third",
 ]
 
+from PyQt6.QtWidgets import QStyledItemDelegate, QDateEdit
+from PyQt6.QtCore import Qt, QModelIndex, QDate
 
-class SpinBoxDelegate(QStyledItemDelegate):
+
+class WidgetForDelegate:
+    def __init__(self, col: int, editor: QSpinBox | QDateEdit | QLineEdit):
+        self.col = col
+
+    @staticmethod
+    def create_editor(editor: QSpinBox | QDateEdit | QLineEdit, ):
+        pass
+
+
+class SpinWidgetForDelegate(WidgetForDelegate):
+    def __init__(self, col: int, editor: QSpinBox | QDateEdit):
+        super().__init__(col, editor)
+        self.create_editor(editor)
+
+    @staticmethod
+    def create_editor(editor: QSpinBox, ):
+        editor.setMinimum(0)
+        editor.setMaximum(100)
+
+    def set_editor_data(self, editor: QSpinBox, value):
+        try:
+            editor.setValue(int(value))
+        except ValueError:
+            editor.setValue(0)
+
+    def set_model_data(self, editor: QSpinBox) -> int:
+        editor.interpretText()
+        return editor.value()
+
+
+class DateWidgetForDelegate(WidgetForDelegate):
+    def __init__(self, col: int, editor: QDateEdit):
+        super().__init__(col, editor)
+        self.create_editor(editor)
+
+    @staticmethod
+    def create_editor(editor: QDateEdit, ):
+        editor.setDisplayFormat("dd-MM-yy")  # Встановіть потрібний формат дати
+        editor.setCalendarPopup(True)  # Увімкніть календар, що випадає
+        editor.setDate(QDate.currentDate())
+
+    def set_editor_data(self, editor: QDateEdit, value):
+        editor.setDate(value)
+
+    def set_model_data(self, editor: QDateEdit) -> QDate:
+        return editor.date()
+
+
+class MyDelegate(QStyledItemDelegate):
     """
-    Встановити SpinBox для поля в таблиці колонка 10
-    можливі параметри: count/remainder
+    Встановити кастомний делегат для полів
+    0 - SQpinBox
+    1 - QDate
+    2 - QLineEdit
     """
 
-    def __init__(self, column_type, parent=None):
-        super().__init__(parent)
-        self.column_type = column_type  # Тип даних для стовпця
+    def __init__(self, parent=None):
+        super().__init__(parent)  # Тип даних для стовпця
+        self.spin = None
+        self.date_field = None
 
     def createEditor(self, parent, option, index):
-        editor = QSpinBox(parent)
-        if self.column_type == "count":
-            editor.setMinimum(0)
-            editor.setMaximum(100)
-        elif self.column_type == "remainder":
-            editor.setMinimum(0)
-            editor.setMaximum(200)
+        if index.column() == 0:
+            editor = QSpinBox(parent)
+            self.spin = SpinWidgetForDelegate(index.column(), editor)
+        elif index.column() == 1:
+            editor = QDateEdit(parent)
+            self.date_field = DateWidgetForDelegate(index.column(), editor)
+        else:
+            editor = QLineEdit(parent)
         return editor
 
-    def setEditorData(self, editor: QSpinBox, index):
+    def setEditorData(self, editor: QWidget, index: QModelIndex):
 
         value = index.model().data(index, Qt.ItemDataRole.DisplayRole)
         if value:
-            try:
-                editor.setValue(int(value))
-            except ValueError:
-                print("Except")
-                editor.setValue(0)
+            if isinstance(editor, QDateEdit):
+                self.date_field.set_editor_data(editor, value)
+            elif isinstance(editor, QSpinBox):
+                self.spin.set_editor_data(editor, value)
+            elif isinstance(editor, QLineEdit):
+                editor.setText(str(value))
+
+    def setModelData(self, editor: QWidget, model, index: QModelIndex):
+        if isinstance(editor, QSpinBox):
+            value = self.spin.set_model_data(editor)
+        elif isinstance(editor, QDateEdit):
+            value = self.date_field.set_model_data(editor)
         else:
-            editor.setValue(0)
-
-    def setModelData(self, editor: QSpinBox, model, index):
-        editor.interpretText()
-        value = editor.value()
-        model.setData(index, value, Qt.ItemDataRole.EditRole)
-
-
-class SpinBoxDelegate2(QStyledItemDelegate):
-    """
-    Встановити SpinBox для поля в таблиці колонка 10
-    можливі параметри: count/remainder
-    """
-
-    def __init__(self, column_type, parent=None):
-        super().__init__(parent)
-        self.column_type = column_type  # Тип даних для стовпця
-
-    def createEditor(self, parent, option, index):
-        editor = QSpinBox(parent)
-        if self.column_type == "count":
-            editor.setMinimum(0)
-            editor.setMaximum(100)
-        elif self.column_type == "remainder":
-            editor.setMinimum(0)
-            editor.setMaximum(200)
-        return editor
-
-    def setEditorData(self, editor: QSpinBox, index):
-
-        value = index.model().data(index, Qt.ItemDataRole.DisplayRole)
-        if value:
-            try:
-                editor.setValue(int(value))
-            except ValueError:
-                print("Except")
-                editor.setValue(0)
-        else:
-            editor.setValue(0)
-
-    def setModelData(self, editor: QSpinBox, model, index):
-        editor.interpretText()
-        value = editor.value()
+            value = editor.text()
         model.setData(index, value, Qt.ItemDataRole.EditRole)
 
 
@@ -195,11 +215,14 @@ class WidgetRight(QWidget):
         """
         self.tb_view.setModel(self.tb_model)
 
-        delegate_count_shoot_spinbox = SpinBoxDelegate("count")
-        self.tb_view.setItemDelegateForColumn(1, delegate_count_shoot_spinbox)
+        # delegate_count_shoot_spinbox = SpinBoxDelegate("count")
+        # self.tb_view.setItemDelegateForColumn(1, delegate_count_shoot_spinbox)
+        # self.tb_view.setItemDelegateForColumn(0, delegate_count_shoot_spinbox)
 
-        delegate_remainder_of_projectile = SpinBoxDelegate2("remainder")
-        self.tb_view.setItemDelegateForColumn(0, delegate_remainder_of_projectile)
+        delegate = MyDelegate(self.tb_view)
+        self.tb_view.setItemDelegateForColumn(0, delegate)
+        self.tb_view.setItemDelegateForColumn(1, delegate)
+        self.tb_view.setItemDelegateForColumn(2, delegate)
 
         self.right_layout.addWidget(self.tb_view)
 
