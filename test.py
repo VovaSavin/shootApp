@@ -19,21 +19,24 @@ from PyQt6.QtCore import Qt, QModelIndex, QDate
 
 
 class WidgetForDelegate:
-    def __init__(self, col: int, editor: QSpinBox | QDateEdit | QLineEdit):
-        self.col = col
+    def __init__(self, ):
+        pass
 
-    @staticmethod
-    def create_editor(editor: QSpinBox | QDateEdit | QLineEdit, ):
+    def create_editor(self, editor: QSpinBox | QDateEdit | QLineEdit, ):
+        pass
+
+    def set_editor_data(self, editor: QSpinBox | QDateEdit | QLineEdit, value):
+        pass
+
+    def set_model_data(self, editor: QSpinBox | QDateEdit | QLineEdit, ):
         pass
 
 
 class SpinWidgetForDelegate(WidgetForDelegate):
-    def __init__(self, col: int, editor: QSpinBox | QDateEdit):
-        super().__init__(col, editor)
-        self.create_editor(editor)
+    def __init__(self, ):
+        super().__init__()
 
-    @staticmethod
-    def create_editor(editor: QSpinBox, ):
+    def create_editor(self, editor: QSpinBox, ):
         editor.setMinimum(0)
         editor.setMaximum(100)
 
@@ -49,12 +52,10 @@ class SpinWidgetForDelegate(WidgetForDelegate):
 
 
 class DateWidgetForDelegate(WidgetForDelegate):
-    def __init__(self, col: int, editor: QDateEdit):
-        super().__init__(col, editor)
-        self.create_editor(editor)
+    def __init__(self, ):
+        super().__init__()
 
-    @staticmethod
-    def create_editor(editor: QDateEdit, ):
+    def create_editor(self, editor: QDateEdit, ):
         editor.setDisplayFormat("dd-MM-yy")  # Встановіть потрібний формат дати
         editor.setCalendarPopup(True)  # Увімкніть календар, що випадає
         editor.setDate(QDate.currentDate())
@@ -76,21 +77,21 @@ class MyDelegate(QStyledItemDelegate):
 
     def __init__(self, parent=None):
         super().__init__(parent)  # Тип даних для стовпця
-        self.spin = None
-        self.date_field = None
+        self.spin = SpinWidgetForDelegate()
+        self.date_field = DateWidgetForDelegate()
 
     def createEditor(self, parent, option, index):
         if index.column() == 0:
             editor = QSpinBox(parent)
-            self.spin = SpinWidgetForDelegate(index.column(), editor)
+            self.spin.create_editor(editor)
         elif index.column() == 1:
             editor = QDateEdit(parent)
-            self.date_field = DateWidgetForDelegate(index.column(), editor)
+            self.date_field.create_editor(editor)
         else:
             editor = QLineEdit(parent)
         return editor
 
-    def setEditorData(self, editor: QWidget, index: QModelIndex):
+    def setEditorData(self, editor: QDateEdit | QSpinBox | QLineEdit, index: QModelIndex):
 
         value = index.model().data(index, Qt.ItemDataRole.DisplayRole)
         if value:
@@ -101,7 +102,7 @@ class MyDelegate(QStyledItemDelegate):
             elif isinstance(editor, QLineEdit):
                 editor.setText(str(value))
 
-    def setModelData(self, editor: QWidget, model, index: QModelIndex):
+    def setModelData(self, editor: QDateEdit | QSpinBox | QLineEdit, model, index: QModelIndex):
         if isinstance(editor, QSpinBox):
             value = self.spin.set_model_data(editor)
         elif isinstance(editor, QDateEdit):
@@ -175,10 +176,10 @@ class WidgetRight(QWidget):
         self.main_layout = QVBoxLayout()
         self.right_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.tb_view = QTableView()
-        # self.tb_model = MyTableModel(
-        #     [['' for _ in range(len(lst))]], self.tb_view
-        # )
-        self.tb_model = QStandardItemModel(5, len(lst))
+        self.tb_model = MyTableModel(
+            [['' for _ in range(len(lst))]] * 3, self.tb_view
+        )
+        # self.tb_model = QStandardItemModel(5, len(lst))
         self.init_widgets()
 
     def init_widgets(self):
