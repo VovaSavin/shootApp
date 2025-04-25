@@ -8,7 +8,13 @@ from PyQt6.QtWidgets import (
     QInputDialog, QStyledItemDelegate, QDateEdit, QHBoxLayout, QTimeEdit,
 )
 
-from delegates.delegates import SpinWidgetForDelegate, DateWidgetForDelegate, TimeWidgetDelegate
+from delegates.delegates import (
+    SpinWidgetForDelegate,
+    DateWidgetForDelegate,
+    TimeWidgetDelegate,
+    ComboWidgetDelegate,
+)
+from database.database import DBWorker
 
 FONT_SIZE_LABEL = 14
 DATA_APP = {
@@ -32,6 +38,13 @@ DATA_APP = {
         ("Залишок",),
         ("Примітка",),
     ),
+    "connection_data": {
+        'NAME': 'howitzer',
+        'USER': 'volodimir',
+        'PASSWORD': '123456',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
 
 
@@ -45,9 +58,17 @@ class MyDelegate(QStyledItemDelegate):
 
     def __init__(self, parent=None):
         super().__init__(parent)  # Тип даних для стовпця
+        self.conn = DBWorker(
+            DATA_APP["connection_data"]
+        )
+        self.positions = self.conn.get_data(
+            "howtizerShoots_positions",
+            ('id', 'name', 'date_set', 'coordinate_x', 'coordinate_y', 'date_time_create', 'is_active',)
+        )
         self.spin = SpinWidgetForDelegate()
         self.date_field = DateWidgetForDelegate()
         self.time_field = TimeWidgetDelegate()
+        self.combo = ComboWidgetDelegate(self.positions)
 
     def createEditor(self, parent, option, index):
         if index.column() in (10, 13):
@@ -337,12 +358,15 @@ class WidgetLeft(QWidget):
             for column in range(model.columnCount()):
                 index = model.index(row, column)
                 value = model.data(index, Qt.ItemDataRole.DisplayRole)
-                temp_inner_data.append(
-                    (row, column, value,)
+                if value != "":
+                    temp_inner_data.append(
+                        value
+                    )
+            if len(temp_inner_data):
+                self.data_tables.append(
+                    temp_inner_data
                 )
-            self.data_tables.append(
-                temp_inner_data
-            )
+        print(self.data_tables)
 
 
 class WidgetWrapAll(QWidget):

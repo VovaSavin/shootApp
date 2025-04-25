@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QDateEdit,
     QTimeEdit,
+    QComboBox,
 )
 
 
@@ -11,13 +12,13 @@ class WidgetForDelegate:
     def __init__(self, ):
         pass
 
-    def create_editor(self, editor: QSpinBox | QDateEdit | QLineEdit, ):
+    def create_editor(self, editor: QSpinBox | QDateEdit | QLineEdit | QComboBox, ):
         pass
 
-    def set_editor_data(self, editor: QSpinBox | QDateEdit | QLineEdit, value):
+    def set_editor_data(self, editor: QSpinBox | QDateEdit | QLineEdit | QComboBox, value):
         pass
 
-    def set_model_data(self, editor: QSpinBox | QDateEdit | QLineEdit, ):
+    def set_model_data(self, editor: QSpinBox | QDateEdit | QLineEdit | QComboBox, ):
         pass
 
 
@@ -73,3 +74,19 @@ class TimeWidgetDelegate(WidgetForDelegate):
 
     def set_model_data(self, editor: QTimeEdit, ) -> QTime:
         return editor.time()
+
+
+class ComboWidgetDelegate(WidgetForDelegate):
+    """
+    ComboBox
+    """
+
+    def __init__(self, items: list | tuple):
+        super().__init__()
+        self.items = items
+
+    def set_editor_data(self, editor: QComboBox, value):
+        editor.addItems(self.items)
+
+    def set_model_data(self, editor: QComboBox, ) -> str:
+        return editor.currentText()
