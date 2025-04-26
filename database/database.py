@@ -85,19 +85,3 @@ class DBWorker:
         else:
             print(self.error)
             return None
-
-# data_fields = ('id', 'name', 'date_set', 'coordinate_x', 'coordinate_y', 'date_time_create', 'is_active',)
-# c = DBWorker(
-#     host=CONNECT_DATA["HOST"],
-#     name=CONNECT_DATA["NAME"],
-#     user=CONNECT_DATA["USER"],
-#     password=CONNECT_DATA["PASSWORD"],
-#     port=CONNECT_DATA["PORT"],
-# )
-# print(
-#     c.get_data(
-#         tb_name="howtizerShoots_positions",
-#         fields=data_fields,
-#     )
-#
-# )

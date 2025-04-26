@@ -15,6 +15,7 @@ from delegates.delegates import (
     ComboWidgetDelegate,
 )
 from database.database import DBWorker
+from services.services import PopulatedTb
 
 FONT_SIZE_LABEL = 14
 DATA_APP = {
@@ -84,6 +85,7 @@ class MyDelegate(QStyledItemDelegate):
         elif index.column() == 7:
             editor = QComboBox(parent)
             self.combo.create_editor(editor)
+            self.combo.set_styles(editor)
         else:
             editor = QLineEdit(parent)
         return editor
@@ -147,6 +149,10 @@ class MyTableModel(QAbstractTableModel):
     def setData(self, index, value, role, ):
         if role == Qt.ItemDataRole.EditRole:
             self._data[index.row()][index.column()] = value
+            populated_tb = PopulatedTb(
+                index, 0, 3, self._data, value
+            )
+            populated_tb.populated()
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
             return True
         return False

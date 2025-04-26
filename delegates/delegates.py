@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QDate, QTime
+from PyQt6.QtCore import QDate, QTime, Qt
 from PyQt6.QtWidgets import (
     QSpinBox,
     QLineEdit,
@@ -95,3 +95,36 @@ class ComboWidgetDelegate(WidgetForDelegate):
 
     def set_model_data(self, editor: QComboBox, ) -> str:
         return editor.currentText()
+
+    def set_styles(self, editor: QComboBox):
+        editor.setStyleSheet(
+            """
+                QComboBox {
+                            background-color: lightblue;
+                            color: darkblue;
+                            border: 1px solid blue;
+                            border-radius: 5px;
+                            padding: 5px;
+                            font-size: 16px;
+                        }
+    
+                        QComboBox:hover {
+                            background-color: skyblue;
+                        }
+    
+                        QComboBox:on { /* Стиль для розкритого списку */
+                            border: 2px solid navy;
+                        }
+    
+                        QComboBox QAbstractItemView { /* Стиль для самого випадаючого списку */
+                            background-color: white;
+                            color: black;
+                            border: 1px solid gray;
+                            selection-background-color: lightgray;
+                            selection-color: black;
+                        }
+            """
+        )
+        editor.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
