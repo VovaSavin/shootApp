@@ -85,8 +85,13 @@ class ComboWidgetDelegate(WidgetForDelegate):
         super().__init__()
         self.items = items
 
+    def create_editor(self, editor: QComboBox, ):
+        editor.addItems(
+            [item["name"] for item in self.items]
+        )
+
     def set_editor_data(self, editor: QComboBox, value):
-        editor.addItems(self.items)
+        editor.setCurrentText(value)
 
     def set_model_data(self, editor: QComboBox, ) -> str:
         return editor.currentText()

@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QWidget, QApplication, QLabel,
     QPushButton, QLineEdit, QVBoxLayout,
     QSpinBox, QMainWindow, QTableView,
-    QInputDialog, QStyledItemDelegate, QDateEdit, QHBoxLayout, QTimeEdit,
+    QInputDialog, QStyledItemDelegate, QDateEdit, QHBoxLayout, QTimeEdit, QComboBox,
 )
 
 from delegates.delegates import (
@@ -54,6 +54,7 @@ class MyDelegate(QStyledItemDelegate):
     0 - дата;
     2, 8 - час;
     10, 13 - числа;
+    7 - список, що випадає;
     """
 
     def __init__(self, parent=None):
@@ -80,6 +81,9 @@ class MyDelegate(QStyledItemDelegate):
         elif index.column() in (2, 8):
             editor = QTimeEdit(parent)
             self.time_field.create_editor(editor)
+        elif index.column() == 7:
+            editor = QComboBox(parent)
+            self.combo.create_editor(editor)
         else:
             editor = QLineEdit(parent)
         return editor
@@ -93,6 +97,8 @@ class MyDelegate(QStyledItemDelegate):
                 self.spin.set_editor_data(editor, value)
             elif isinstance(editor, QTimeEdit):
                 self.time_field.set_editor_data(editor, value)
+            elif isinstance(editor, QComboBox):
+                self.combo.set_editor_data(editor, value)
             elif isinstance(editor, QLineEdit):
                 editor.setText(str(value))
 
@@ -103,6 +109,8 @@ class MyDelegate(QStyledItemDelegate):
             value = self.date_field.set_model_data(editor)
         elif isinstance(editor, QTimeEdit):
             value = self.time_field.set_model_data(editor)
+        elif isinstance(editor, QComboBox):
+            value = self.combo.set_model_data(editor)
         else:
             value = editor.text()
         model.setData(index, value, Qt.ItemDataRole.EditRole)
@@ -330,6 +338,9 @@ class WidgetLeft(QWidget):
         # Числа
         self.tb_view.setItemDelegateForColumn(10, delegate)
         self.tb_view.setItemDelegateForColumn(13, delegate)
+
+        # Списки, що випадають
+        self.tb_view.setItemDelegateForColumn(7, delegate)
 
         self.left_layout.addWidget(self.tb_view)
 
