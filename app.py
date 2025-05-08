@@ -14,34 +14,17 @@ from delegates.delegates import (
     TimeWidgetDelegate,
     ComboWidgetDelegate,
 )
-from database.database import DBWorker
+from database.database import DBWorker, connector
 from services.services import PopulatedTb
 
-FONT_SIZE_LABEL = 14
 DATA_APP = {
-    "title": "Артилерія 1 БрОП",
-    "sizes": (1900, 600),
-    "head_labels": (
-        # 0 - text,
-        ("Дата",),
-        ("Ціль",),
-        ("Час початку",),
-        ("Отримано від",),
-        ("Тип цілі",),
-        ("Коорд X",),
-        ("Коорд Y",),
-        ("Позиція",),
-        ("Час завершення",),
-        ("Тип снаряду",),
-        ("К-ть пострілів",),
-        ("Враження цілі",),
-        ("Фото/відео",),
-        ("Залишок",),
-        ("Примітка",),
-    ),
+    "head_labels": [["Дата"], ["Ціль"], ["Час початку"], ["Отримано від"], ["Тип цілі"], ["Коорд X"], ["Коорд Y"],
+                    ["Позиція"], ["Час завершення"], ["Тип снаряду"], ["К-ть пострілів"], ["Враження цілі"],
+                    ["Фото/відео"], ["Залишок"], ["Примітка"]
+                    ],
     "connection_data": {
-        'NAME': 'howitzer',
-        'USER': 'volodimir',
+        'NAME': 'hows',
+        'USER': 'postgres',
         'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '5432',
@@ -64,8 +47,8 @@ class MyDelegate(QStyledItemDelegate):
             DATA_APP["connection_data"]
         )
         self.positions = self.conn.get_data(
-            "howtizerShoots_positions",
-            ('id', 'name', 'date_set', 'coordinate_x', 'coordinate_y', 'date_time_create', 'is_active',)
+            "hw_position",
+            ('id', 'name', 'remainder',)
         )
         self.spin = SpinWidgetForDelegate()
         self.date_field = DateWidgetForDelegate()
@@ -119,10 +102,11 @@ class MyDelegate(QStyledItemDelegate):
 
 
 class MyTableModel(QAbstractTableModel):
-    def __init__(self, data, tb: QTableView):
+    def __init__(self, data, tb: QTableView, cols: list):
         super().__init__()
         self._data = data
         self.tb = tb
+        self.cols = cols
 
     def rowCount(self, parent=QModelIndex()):
         return len(self._data)
@@ -141,7 +125,7 @@ class MyTableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
-                return [DATA_APP["head_labels"][i][0] for i in range(len(DATA_APP["head_labels"]))][section]
+                return [self.cols[i][0] for i in range(len(self.cols))][section]
             if orientation == Qt.Orientation.Vertical:
                 return f"Р{section + 1}"
         return None
@@ -150,7 +134,7 @@ class MyTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.EditRole:
             self._data[index.row()][index.column()] = value
             populated_tb = PopulatedTb(
-                index, 0, 3, self._data, value
+                index, 0, 3, self._data, value, "Розвідка1БрОП"
             )
             populated_tb.populated()
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
@@ -254,8 +238,9 @@ class WidgetLeft(QWidget):
     Постріли
     """
 
-    def __init__(self, parent=None, main_layout: QVBoxLayout | QHBoxLayout = None, ):
+    def __init__(self, parent=None, main_layout: QVBoxLayout | QHBoxLayout = None, cols=None):
         super().__init__(parent)
+        self.cols = cols
         self.left_layout = QVBoxLayout(self)
         self.left_layout.setContentsMargins(0, 5, 0, 5)
         self.left_layout.setSpacing(0)
@@ -264,14 +249,10 @@ class WidgetLeft(QWidget):
         # Header
         self.header_widget_shoots = HeaderWidgetShoots(self, self.left_layout)
         self.add_cells_button = QPushButton()
-        self.test_data = [
-            [''.join(random.choices(string.ascii_letters, k=random.randint(1, 7))) for _ in range(15)]
-            for _ in range(15)
-        ]
         # Table
         self.tb_view = QTableView()
         self.tb_model = MyTableModel(
-            [['' for _ in range(15)]], self.tb_view
+            [['' for _ in range(len(self.cols))]], self.tb_view, self.cols
         )
         # GetDataTb
         self.get_data_button = QPushButton()
@@ -351,16 +332,6 @@ class WidgetLeft(QWidget):
         self.left_layout.addWidget(self.tb_view)
 
     # Handlers
-    def add_row(self):
-        # Введення нового рядка через діалогове вікно
-        new_row = []
-        for col in range(3):  # У нашій таблиці 3 колонки
-            value, ok = QInputDialog.getText(self, "Додавання запису", f"Введіть дані для стовпця {col + 1}:")
-            if ok:
-                new_row.append(value)
-        if new_row:
-            self.tb_model.addRow(new_row)
-
     def add_cells(self):
         """
         Додавання нового рядка
@@ -391,11 +362,13 @@ class WidgetWrapAll(QWidget):
     Віджет обгортка
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, cols=None):
         super().__init__(parent=parent)
+        self.cols = cols
         self.main_layout_wrap = QHBoxLayout(self)
-        self.widget_left = WidgetLeft(self, self.main_layout_wrap)
+        self.widget_left = WidgetLeft(self, self.main_layout_wrap, cols=self.cols)
         self.widget_right = WidgetRight(self, self.main_layout_wrap)
+
         self.init_widgets()
 
     def init_widgets(self):
@@ -434,8 +407,15 @@ class WidgetWrapAll(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.in_app = QApplication(sys.argv)
+
+        self.db_object = connector()
+        self.conn = self.db_object.get_data(
+            "hw_listheadtable",
+            ("id", "names",)
+        )
         self.setWindowTitle(
-            DATA_APP["title"]
+            self.conn[0]["names"]["title"]
         )
         self.widget_wrap_all = None
 
@@ -443,9 +423,12 @@ class MainWindow(QMainWindow):
 
     def initUI(self):
         self.setMinimumSize(
-            QSize(*DATA_APP["sizes"], )
+            QSize(
+                int(self.in_app.primaryScreen().size().width() / 1.1),
+                int(self.in_app.primaryScreen().size().height() / 1.3)
+            )
         )
-        self.widget_wrap_all = WidgetWrapAll(self)
+        self.widget_wrap_all = WidgetWrapAll(self, cols=self.conn[0]["names"]["head_labels"])
         self.setCentralWidget(self.widget_wrap_all)
         self.show()
 

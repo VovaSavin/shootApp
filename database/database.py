@@ -1,8 +1,8 @@
 import psycopg2
 
 CONNECT_DATA = {
-    'NAME': 'howitzer',
-    'USER': 'volodimir',
+    'NAME': 'hows',
+    'USER': 'postgres',
     'PASSWORD': '123456',
     'HOST': 'localhost',
     'PORT': '5432',
@@ -32,14 +32,14 @@ class DBWorker:
         :return:
         """
         try:
-            connect = psycopg2.connect(
+            self.connect = psycopg2.connect(
                 host=self.host,
                 database=self.name,
                 user=self.user,
                 password=self.password,
                 port=self.port
             )
-            cursor = connect.cursor()
+            cursor = self.connect.cursor()
             cursor.execute(
                 "SELECT version();"
             )
@@ -51,8 +51,15 @@ class DBWorker:
             print(self.error)
         finally:
             # Забезпечуємо закриття з'єднання, навіть якщо сталася помилка
-            if connect:
-                connect.close()
+            if self.connect:
+                self.connect.close()
+
+    def get_columns(self, ):
+        """
+        Отримує список для колонок в таблиці
+        :return:
+        """
+        pass
 
     def get_data(self, tb_name: str, fields: tuple | list) -> list[dict] | None:
         """
@@ -85,3 +92,33 @@ class DBWorker:
         else:
             print(self.error)
             return None
+
+
+def connector() -> DBWorker:
+    """
+    Повертає об'єкт для підключення до БД
+    :return:
+    """
+    conn = DBWorker(
+        CONNECT_DATA
+    )
+    return conn
+
+
+# c = DBWorker(
+#     {
+#         'NAME': 'hows',
+#         'USER': 'postgres',
+#         'PASSWORD': '123456',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# )
+#
+# c = connector()
+# print(
+#     c.get_data(
+#         "hw_listheadtable",
+#         ("id", "names",)
+#     )
+# )
